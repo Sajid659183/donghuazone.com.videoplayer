@@ -1,28 +1,53 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Custom Video Player</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Private Video Panel — Player</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
+<div class="wrap">
+  <h1>Private Video Panel</h1>
 
-<div class="container">
-    <h2>Custom Video Player</h2>
+  <!-- --- UPLOAD / CONFIG PANEL (Only you will use this page) --- -->
+  <div class="panel">
+    <label>1) Preview / Load local file (for testing)</label>
+    <input type="file" id="fileInput" accept="video/*">
+    <small>Local file loads only in your browser (preview).</small>
 
-    <!-- Video Player -->
-    <video id="videoPlayer" controls>
-        <source id="videoSource" src="" type="video/mp4">
-        Your browser does not support video playback.
-    </video>
+    <label>2) Public video URL (required for embed)</label>
+    <input id="publicUrl" placeholder="Paste public mp4/m3u8 URL (e.g. https://yourdomain.com/file.mp4)">
 
-    <!-- Input to Set Video URL -->
-    <input type="text" id="videoURL" placeholder="Enter video URL (mp4)">
-    <button onclick="loadVideo()">Load Video</button>
+    <label>3) Add subtitles (multiple .vtt)</label>
+    <input type="file" id="subsInput" accept=".vtt,.srt" multiple>
+    <div id="subsList"></div>
 
-    <h3>Embed Code:</h3>
-    <textarea id="embedCode" readonly></textarea>
+    <label>4) Download button option</label>
+    <select id="downloadOption">
+      <option value="on">Allow download</option>
+      <option value="off">Disable download</option>
+    </select>
+
+    <button id="applyBtn">Apply & Generate Embed Code</button>
+  </div>
+
+  <!-- --- THE PLAYER (visitor view as iframe will show this) --- -->
+  <div class="player-wrap">
+    <video id="player" controls preload="metadata" crossorigin="anonymous"></video>
+    <div class="player-controls">
+      <select id="subtitleSelect"></select>
+      <a id="downloadBtn" class="btn" download>⬇ Download</a>
+    </div>
+  </div>
+
+  <!-- --- EMBED CODE --- -->
+  <div class="embedbox">
+    <h3>Embed Code (paste in your site)</h3>
+    <textarea id="embedCode" readonly placeholder="Embed code will appear after Apply"></textarea>
+    <p class="note">**Note:** Embed works only if Public URL is reachable by visitors (must be hosted publicly).</p>
+  </div>
+
 </div>
 
 <script src="player.js"></script>
