@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Video Player</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+    <h2>Custom Video Player</h2>
+
+    <!-- Video Player -->
+    <video id="videoPlayer" controls>
+        <source id="videoSource" src="" type="video/mp4">
+        Your browser does not support video playback.
+    </video>
+
+    <!-- Input to Set Video URL -->
+    <input type="text" id="videoURL" placeholder="Enter video URL (mp4)">
+    <button onclick="loadVideo()">Load Video</button>
+
+    <h3>Embed Code:</h3>
+    <textarea id="embedCode" readonly></textarea>
+</div>
+
+<script src="player.js"></script>
+</body>
+</html>
