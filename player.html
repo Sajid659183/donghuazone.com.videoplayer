@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Custom Video Player</title>
+
+<!-- HLS for .m3u8 -->
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+<style>
+    body {
+        background: #000;
+        color: #fff;
+        margin: 0;
+        padding: 0;
+        text-align: center;
+        font-family: Arial, sans-serif;
+    }
+
+    #playerBox {
+        width: 95%;
+        max-width: 900px;
+        margin: 20px auto;
+        background: #111;
+        padding: 10px;
+        border-radius: 10px;
+    }
+
+    video {
+        width: 100%;
+        border-radius: 10px;
+        background: #000;
+    }
+
+    .downloadBtn {
+        display: inline-block;
+        margin-top: 15px;
+        padding: 10px 20px;
+        background: #00ffcc;
+        color: #000;
+        font-weight: bold;
+        text-decoration: none;
+        border-radius: 8px;
+    }
+
+    .subTitle {
+        margin-top: 15px;
+    }
+
+    select {
+        padding: 10px;
+        background: #222;
+        color: #fff;
+        border: 1px solid #444;
+        border-radius: 6px;
+    }
+</style>
+</head>
+
+<body>
+
+<div id="playerBox">
+    <video id="video" controls></video>
+
+    <div class="subTitle">
+        <label>Select Subtitle:</label>
+        <select id="subSelect" onchange="changeSub()"></select>
+    </div>
+
+    <a id="downloadBtn" class="downloadBtn" href="#" download>Download Video</a>
+</div>
+
+<script>
+    // URL Parameters Read
+    const urlParams = new URLSearchParams(window.location.search);
+
+    const videoURL = urlParams.get("video");      // MP4/M3U8 Video URL
+    const downloadURL = urlParams.get("download"); // Download Link
+    const subtitleList = urlParams.get("subs");    // Subtitles JSON List
+
+    const video = document.getElementById("video");
+
+    // SET DOWNLOAD LINK
+    if (downloadURL) {
+        document.getElementById("downloadBtn").href = downloadURL;
+    }
+
+    // PLAY VIDEO (HLS + MP4 SUPPORT)
+    if (videoURL.includes(".m3u8")) {
+        if (Hls.isSupported()) {
+            const hls = new Hls();
+            hls.loadSource(videoURL);
+            hls.attachMedia(video);
+        } else {
+            video.src = videoURL;
+        }
+    } else {
+        video.src = videoURL;
+    }
+
+    // SUBTITLE PROCESS
+    let subs = [];
+
+    if (subtitleList) {
+        subs = JSON.parse(subtitleList);
+
+        subs.forEach((s, index) => {
+            const option = document.createElement("option");
+            option.value = index;
+            option.textContent = s.label;
+            document.getElementById("subSelect").appendChild(option);
+        });
+
+        loadSubtitle(0);
+    }
+
+    function loadSubtitle(i) {
+        const existingTracks = video.querySelectorAll("track");
+        existingTracks.forEach(t => t.remove());
+
+        const track = document.createElement("track");
+        track.kind = "subtitles";
+        track.label = subs[i].label;
+        track.src = subs[i].src;
+        track.srclang = subs[i].lang;
+        track.default = true;
+        video.appendChild(track);
+    }
+
+    function changeSub() {
+        const i = document.getElementById("subSelect").value;
+        loadSubtitle(i);
+    }
+</script>
+
+</body>
+</html>
