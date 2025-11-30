@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Embed Generator</title>
+</head>
+<body style="font-family:Arial; padding:20px">
+
+<h2>Create Embed URL</h2>
+
+<input id="url" style="width:100%" placeholder="Paste any video link"><br><br>
+<input id="poster" style="width:100%" placeholder="Poster image link (optional)"><br><br>
+<input id="sub" style="width:100%" placeholder="Subtitle .srt link (optional)"><br><br>
+
+<button onclick="gen()">Generate</button>
+
+<p>Embed URL:</p>
+<textarea id="output" style="width:100%;height:120px;"></textarea>
+
+<script>
+function gen(){
+    let u = document.getElementById("url").value;
+    let poster = document.getElementById("poster").value;
+    let sub = document.getElementById("sub").value;
+
+    let link = `https://USERNAME.github.io/REPO/index.html?url=${encodeURIComponent(u)}`;
+
+    if(poster) link += `&poster=${encodeURIComponent(poster)}`;
+    if(sub) link += `&sub=${encodeURIComponent(sub)}`;
+
+    document.getElementById("output").value = link;
+}
+</script>
+
+</body>
+</html>
