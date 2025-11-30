@@ -1,34 +1,235 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Video Player</title>
-  <style>
-    body { margin: 0; background: black; }
-    iframe {
-      width: 100%;
-      height: 100vh;
-      border: none;
-    }
-    h2 {
-      color: white;
-      font-family: Arial;
-      padding: 20px;
-    }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>GDPlayer-style Player</title>
+
+<!-- HLS -->
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+<style>
+  :root{--bg:#000;--card:#08121a;--accent:#06b6d4}
+  body{margin:0;background:var(--bg);color:#fff;font-family:Arial,Helvetica,sans-serif}
+  .wrap{max-width:1100px;margin:18px auto;padding:12px}
+  .playerCard{background:#071019;border-radius:10px;padding:12px}
+  video{width:100%;height:auto;border-radius:8px;background:#000;display:block}
+  .controls{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}
+  select,input{padding:8px;border-radius:6px;border:1px solid #123;background:#02101a;color:#e6eef3}
+  .btn{padding:9px 12px;border-radius:8px;border:0;background:var(--accent);color:#002029;cursor:pointer;font-weight:700}
+  .small{font-size:13px;color:#9fb8c2;margin-top:8px}
+</style>
 </head>
 <body>
+<div class="wrap">
+  <div class="playerCard">
+    <div id="playerArea">
+      <!-- video element will be injected here -->
+    </div>
+
+    <div class="controls" style="margin-top:12px;">
+      <label>Subtitles:
+        <select id="subSelect"><option value="">(None)</option></select>
+      </label>
+
+      <label>Speed:
+        <select id="speedSel"><option>0.5</option><option>0.75</option><option selected>1</option><option>1.25</option><option>1.5</option><option>2</option></select>
+      </label>
+
+      <button id="downloadBtn" class="btn" style="display:none">⬇ Download</button>
+      <button id="openSourceBtn" class="btn" style="background:#ffb86b;color:#000">Open Source</button>
+    </div>
+
+    <div class="small">
+      Tip: If direct-play fails it may be CORS or host blocking. Use a supported host or a proxy.
+    </div>
+  </div>
+</div>
 
 <script>
-  const params = new URLSearchParams(window.location.search);
-  const videoUrl = params.get("url");
+// Utilities
+function parseQuery(){
+  const p = new URLSearchParams(window.location.search);
+  const out = {};
+  for(const [k,v] of p.entries()) out[k]=v;
+  return out;
+}
 
-  if (!videoUrl) {
-    document.write("<h2>No video URL found</h2>");
-  } else {
-    document.write(`<iframe src="${videoUrl}" allowfullscreen></iframe>`);
+// srt -> vtt conversion (simple)
+function srtToVtt(srtText){
+  // remove carriage returns, ensure WEBVTT header
+  let v = 'WEBVTT\n\n';
+  // convert comma timestamps to dot
+  v += srtText.replace(/\r+/g,'').replace(/(\d+:\d+:\d+),(\d+)/g, '$1.$2');
+  return v;
+}
+
+// create track from (url which might be .srt) and return blob-url if converted
+async function prepareSubtitle(url){
+  try{
+    const lower = url.split('?')[0].toLowerCase();
+    if(lower.endsWith('.vtt')) return url; // already ok
+    // fetch the remote .srt or .vtt
+    const resp = await fetch(url);
+    if(!resp.ok) throw new Error('subtitle fetch failed');
+    const text = await resp.text();
+    if(lower.endsWith('.srt') || text.includes('-->')){
+      // convert to vtt
+      const vtt = srtToVtt(text);
+      const blob = new Blob([vtt], {type:'text/vtt'});
+      return URL.createObjectURL(blob);
+    }
+    return url;
+  }catch(err){
+    console.warn('subtitle prepare failed',err);
+    return url;
   }
-</script>
+}
 
+// auto detect and render appropriate player
+async function renderPlayer(){
+  const q = parseQuery();
+  const link = q.url || q.link || q.src || '';
+  const poster = q.poster || '';
+  if(!link){
+    document.getElementById('playerArea').innerHTML = '<div style="padding:20px;color:#fff;font-size:18px">No video URL provided.</div>';
+    return;
+  }
+
+  // helper to inject video element (mp4/m3u8)
+  function injectVideoElement(){
+    const video = document.createElement('video');
+    video.id='theVideo';
+    video.controls=true;
+    video.crossOrigin='anonymous';
+    if(poster) video.poster = poster;
+    document.getElementById('playerArea').innerHTML = '';
+    document.getElementById('playerArea').appendChild(video);
+    return video;
+  }
+
+  // YouTube
+  if(link.includes('youtube.com') || link.includes('youtu.be')){
+    // extract id
+    let id = '';
+    if(link.includes('v=')) id = new URL('http://a?'+link.split('?')[1]).searchParams.get('v');
+    if(!id){
+      // youtu.be shortlink
+      const m = link.match(/youtu\.be\/([^?&]+)/);
+      if(m) id = m[1];
+    }
+    if(!id) id = link.split('/').pop();
+    document.getElementById('playerArea').innerHTML = `<iframe src="https://www.youtube.com/embed/${id}" width="100%" height="560" frameborder="0" allowfullscreen></iframe>`;
+    // download not available
+    document.getElementById('downloadBtn').style.display = 'none';
+    return;
+  }
+
+  // Dailymotion
+  if(link.includes('dailymotion.com')){
+    const m = link.match(/video\/([^_?&]+)/);
+    const id = m ? m[1] : '';
+    document.getElementById('playerArea').innerHTML = `<iframe src="https://www.dailymotion.com/embed/video/${id}" width="100%" height="560" frameborder="0" allowfullscreen></iframe>`;
+    document.getElementById('downloadBtn').style.display = 'none';
+    return;
+  }
+
+  // ok.ru & vk: many hosts allow direct iframe embed
+  if(link.includes('ok.ru') || link.includes('vk.com') || link.includes('rutube') || link.includes('vimeo.com')){
+    document.getElementById('playerArea').innerHTML = `<iframe src="${link}" width="100%" height="560" frameborder="0" allowfullscreen></iframe>`;
+    document.getElementById('downloadBtn').style.display = 'none';
+    return;
+  }
+
+  // direct mp4/mkv/webm or m3u8
+  const video = injectVideoElement();
+  const lower = link.split('?')[0].toLowerCase();
+  if(lower.endsWith('.m3u8') || link.includes('.m3u8')){
+    if(Hls.isSupported()){
+      const hls = new Hls();
+      hls.loadSource(link);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, function() {
+        // nothing
+      });
+    } else {
+      video.src = link; // Safari native
+    }
+    // enable download (m3u8 not directly downloadable, download button points to link)
+    document.getElementById('downloadBtn').style.display = 'inline-block';
+    document.getElementById('downloadBtn').onclick = ()=> window.open(link,'_blank');
+  } else if(lower.endsWith('.mp4') || lower.endsWith('.webm') || lower.endsWith('.mkv') || lower.includes('.mp4')){
+    video.src = link;
+    document.getElementById('downloadBtn').style.display = 'inline-block';
+    document.getElementById('downloadBtn').onclick = ()=> { window.open(link,'_blank'); };
+  } else {
+    // fallback: try embedding url in iframe
+    document.getElementById('playerArea').innerHTML = `<iframe src="${link}" width="100%" height="560" frameborder="0" allowfullscreen></iframe>`;
+    document.getElementById('downloadBtn').style.display = 'none';
+    return;
+  }
+
+  // SUBTITLES: accept sub1, sub2, ... as query params
+  const subs = [];
+  for(let i=1;i<=8;i++){
+    const s = q['sub'+i] || q['subs'+i] || q['sub'+i];
+    if(s) subs.push({label: `Sub ${i}`, url: s});
+  }
+  // also allow &sub=single
+  if(q.sub) subs.unshift({label:'Sub', url:q.sub});
+
+  // convert and attach subs (prepareSubtitle returns usable URL)
+  const subSelect = document.getElementById('subSelect');
+  // clear options
+  subSelect.innerHTML = '<option value="">(None)</option>';
+  for(let i=0;i<subs.length;i++){
+    const raw = subs[i].url;
+    // prepare (may convert srt->vtt)
+    try{
+      const prepared = await prepareSubtitle(raw);
+      const opt = document.createElement('option');
+      opt.value = prepared;
+      opt.textContent = subs[i].label + (raw.endsWith('.srt') ? ' (srt)' : '');
+      subSelect.appendChild(opt);
+      // attach first by default
+      if(i===0){
+        const t = document.createElement('track');
+        t.kind='subtitles'; t.label=opt.textContent; t.src=prepared; t.default=true;
+        document.getElementById('theVideo')?.appendChild(t); // if exists
+      }
+    }catch(e){ console.warn('sub prepare fail',e); }
+  }
+
+  // speed control
+  document.getElementById('speedSel').addEventListener('change', (ev)=>{
+    const v = parseFloat(ev.target.value);
+    const vid = document.getElementById('theVideo');
+    if(vid) vid.playbackRate = v;
+  });
+
+  // subtitle change handler
+  subSelect.addEventListener('change', (ev)=>{
+    const url = ev.target.value;
+    const vid = document.getElementById('theVideo');
+    if(!vid) return;
+    // remove existing tracks
+    Array.from(vid.querySelectorAll('track')).forEach(t=>t.remove());
+    if(url){
+      const tr = document.createElement('track');
+      tr.kind='subtitles'; tr.label='Custom'; tr.src = url; tr.default=true;
+      vid.appendChild(tr);
+    }
+  });
+
+  // open source
+  document.getElementById('openSourceBtn').onclick = ()=> window.open(link,'_blank');
+
+  // when a video element exists, set id to theVideo for track attach
+  if(document.querySelector('#playerArea video')) document.querySelector('#playerArea video').id='theVideo';
+}
+
+// start
+renderPlayer();
+</script>
 </body>
 </html>
