@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Universal Video Player</title>
+  <style>
+    body { background:#000; margin:0; padding:0; }
+    iframe, video {
+      width:100%;
+      height:100vh;
+      border:0;
+    }
+  </style>
+</head>
+<body>
+
+<div id="player"></div>
+
+<script>
+const urlParams = new URLSearchParams(window.location.search);
+const link = urlParams.get('url');
+const sub = urlParams.get('sub');
+const poster = urlParams.get('poster');
+
+function loadVideo(){
+    if(!link){
+        document.getElementById('player').innerHTML = "<h3 style='color:white;text-align:center;'>No video URL found!</h3>";
+        return;
+    }
+
+    // 🔥 1) YouTube Auto Embed
+    if(link.includes("youtube.com") || link.includes("youtu.be")){
+        const youtubeID = link.split("v=")[1] || link.split("/").pop();
+        document.getElementById('player').innerHTML =
+            `<iframe src="https://www.youtube.com/embed/${youtubeID}" allowfullscreen></iframe>`;
+        return;
+    }
+
+    // 🔥 2) Dailymotion Auto Embed
+    if(link.includes("dailymotion")){
+        const dID = link.split("/video/")[1];
+        document.getElementById('player').innerHTML =
+            `<iframe src="https://www.dailymotion.com/embed/video/${dID}" allowfullscreen></iframe>`;
+        return;
+    }
+
+    // 🔥 3) OK.ru Auto Embed
+    if(link.includes("ok.ru")){
+        document.getElementById('player').innerHTML =
+            `<iframe src="${link}" allowfullscreen></iframe>`;
+        return;
+    }
+
+    // 🔥 4) VK.com Video
+    if(link.includes("vk.com")){
+        document.getElementById('player').innerHTML =
+            `<iframe src="${link}" allowfullscreen></iframe>`;
+        return;
+    }
+
+    // 🔥 5) M3U8 / MP4 direct video link
+    if(link.endsWith(".mp4") || link.endsWith(".mkv") || link.endsWith(".webm") || link.includes(".m3u8")){
+        let html = `
+        <video controls poster="${poster || ""}">
+            <source src="${link}">
+        `;
+
+        if(sub){
+            html += `<track src="${sub}" kind="subtitles" srclang="en" label="English" default>`;
+        }
+
+        html += "</video>";
+
+        document.getElementById("player").innerHTML = html;
+        return;
+    }
+
+    // 🔥 6) Default (Embed Any iframe)
+    document.getElementById('player').innerHTML =
+        `<iframe src="${link}" allowfullscreen></iframe>`;
+}
+
+loadVideo();
+</script>
+
+</body>
+</html>
