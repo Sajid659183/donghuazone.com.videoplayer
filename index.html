@@ -1,50 +1,74 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Universal Video Player</title>
-  <style>
-    body {
-      font-family: Arial;
-      padding: 20px;
-      background: #f5f5f5;
-      text-align: center;
-    }
-    input {
-      width: 80%;
-      padding: 12px;
-      font-size: 16px;
-      margin-top: 20px;
-    }
-    button {
-      padding: 12px 25px;
-      font-size: 16px;
-      cursor: pointer;
-      margin-top: 20px;
-    }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>GDPlayer-like — Link Input</title>
+<style>
+  body{font-family:Arial,Helvetica,sans-serif;background:#0b1220;color:#e6eef3;display:flex;flex-direction:column;align-items:center;padding:24px}
+  .card{width:100%;max-width:820px;background:#071019;padding:20px;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.6)}
+  h1{margin:0 0 12px;font-size:20px}
+  input[type=text]{width:100%;padding:12px;border-radius:8px;border:1px solid #123;background:#02101a;color:#e6eef3}
+  .row{display:flex;gap:8px;margin-top:12px}
+  button{padding:10px 14px;border-radius:8px;border:0;background:#06b6d4;color:#001220;font-weight:700;cursor:pointer}
+  small{display:block;color:#8aa;color:#9fb8c2;margin-top:8px}
+  .hint{margin-top:10px;color:#7f9ea6;font-size:13px}
+</style>
 </head>
 <body>
+  <div class="card">
+    <h1>Paste video link (YouTube / MP4 / M3U8 / Dailymotion / OK.ru / VK / any)</h1>
 
-<h2>Paste Any Video URL</h2>
+    <input id="videoLink" type="text" placeholder="Paste any video or embed url here (e.g. https://youtube.com/watch?v=... or https://example.com/video.mp4)" />
 
-<input id="url" type="text" placeholder="Enter video link here">
+    <div style="margin-top:10px">
+      <input id="poster" type="text" placeholder="Optional: poster image URL (thumbnail)" style="width:100%;padding:10px;border-radius:8px;border:1px solid #123;background:#02101a;color:#e6eef3" />
+    </div>
 
-<br>
+    <div style="margin-top:12px">
+      <input id="subUrl" type="text" placeholder="Optional: subtitle URL (.vtt or .srt) — you can add multiple using &sub2=... on player page" style="width:100%;padding:10px;border-radius:8px;border:1px solid #123;background:#02101a;color:#e6eef3" />
+    </div>
 
-<button onclick="go()">Play</button>
+    <div class="row">
+      <button onclick="openPlayer()">Play in Player</button>
+      <button onclick="genEmbed()">Generate embed iframe</button>
+    </div>
+
+    <div class="hint">
+      Tip: To add multiple subtitles in embed, add `&sub2=URL2&sub3=URL3` to the player URL. Example embed result will be shown below.
+    </div>
+
+    <div style="margin-top:12px">
+      <textarea id="embedBox" placeholder="Embed code will appear here" style="width:100%;height:110px;border-radius:8px;padding:10px;border:1px solid #123;background:#00121a;color:#e6eef3"></textarea>
+    </div>
+  </div>
 
 <script>
-function go() {
-  const link = document.getElementById("url").value;
-  if (!link.trim()) {
-    alert("Please enter a video URL");
-    return;
-  }
+function openPlayer(){
+  const link = document.getElementById('videoLink').value.trim();
+  const poster = document.getElementById('poster').value.trim();
+  const sub = document.getElementById('subUrl').value.trim();
+  if(!link){ alert('Please paste a video link'); return; }
+  let url = 'player.html?url=' + encodeURIComponent(link);
+  if(poster) url += '&poster='+encodeURIComponent(poster);
+  if(sub) url += '&sub1='+encodeURIComponent(sub);
+  window.location.href = url;
+}
 
-  window.location.href = "player.html?url=" + encodeURIComponent(link);
+function genEmbed(){
+  const link = document.getElementById('videoLink').value.trim();
+  if(!link){ alert('Paste a link first'); return; }
+  const poster = document.getElementById('poster').value.trim();
+  const sub = document.getElementById('subUrl').value.trim();
+  // change USERNAME/REPO to your GitHub pages hostname after publish
+  const base = window.location.origin + window.location.pathname.replace(/index\.html$/,'') || window.location.origin + '/';
+  // player.html path
+  let playerUrl = base + 'player.html?url=' + encodeURIComponent(link);
+  if(poster) playerUrl += '&poster=' + encodeURIComponent(poster);
+  if(sub) playerUrl += '&sub1=' + encodeURIComponent(sub);
+  const iframe = `<iframe src="${playerUrl}" width="100%" height="480" frameborder="0" allowfullscreen></iframe>`;
+  document.getElementById('embedBox').value = iframe;
 }
 </script>
-
 </body>
 </html>
